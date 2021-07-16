@@ -1,5 +1,6 @@
-import { AxiosRequestConfig, AxiosPromise, AxiosResponse } from './types'
-import { parseHeaders } from './helpers/headers'
+import { AxiosRequestConfig, AxiosPromise, AxiosResponse } from '../types'
+import { parseHeaders } from '../helpers/headers'
+import { createError } from '../helpers/error'
 
 export default function xhr(config: AxiosRequestConfig): AxiosPromise {
   return new Promise((resolve, reject) => {
@@ -15,7 +16,7 @@ export default function xhr(config: AxiosRequestConfig): AxiosPromise {
       request.timeout = timeout
     }
 
-    request.open(method.toUpperCase(), url, true)
+    request.open(method.toUpperCase(), url!, true)
 
     request.onreadystatechange = function() {
       if (request.readyState !== 4) {
@@ -38,11 +39,11 @@ export default function xhr(config: AxiosRequestConfig): AxiosPromise {
     }
 
     request.onerror = function() {
-      reject(new Error('Network Error'))
+      reject(createError('Network Error', config, null, request))
     }
 
     request.ontimeout = function() {
-      reject(new Error(`Timeout of ${timeout} ms exceded`))
+      reject(createError(`Timeout of ${timeout} ms exceded`, config, 'ECONNABORTED', request))
     }
 
     Object.keys(headers).forEach(name => {
@@ -59,7 +60,15 @@ export default function xhr(config: AxiosRequestConfig): AxiosPromise {
       if (response.status >= 200 && response.status < 300) {
         resolve(response)
       } else {
-        reject(new Error(`Requset failed with status code ${request.status}`))
+        reject(
+          createError(
+            `Requset failed with status code ${request.status}`,
+            config,
+            null,
+            request,
+            response
+          )
+        )
       }
     }
   })
