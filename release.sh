@@ -16,4 +16,4 @@
 
   # publish
   # npm publish
-fi
+# fi

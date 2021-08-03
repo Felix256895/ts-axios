@@ -9,11 +9,6 @@
   "files": [
     "dist"
   ],
-  "author": "ustbhuangyi <280309453@qq.com>",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ustbhuangyi/ts-axios"
-  },
   "license": "MIT",
   "engines": {
     "node": ">=6.0.0"
