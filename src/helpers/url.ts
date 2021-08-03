@@ -1,4 +1,4 @@
-import { isDate, isObject, isURLSearchParams } from './util'
+import { isDate, isPlainObject, isURLSearchParams } from './util'
 
 interface URLOrigin {
   protocol: string
@@ -7,7 +7,7 @@ interface URLOrigin {
 
 function encode(val: string): string {
   return encodeURIComponent(val)
-    .replace(/%40/, '@')
+    .replace(/%40/g, '@')
     .replace(/%3A/gi, ':')
     .replace(/%24/g, '$')
     .replace(/%2C/gi, ',')
@@ -16,7 +16,7 @@ function encode(val: string): string {
     .replace(/%5D/gi, ']')
 }
 
-export function buildRUL(
+export function buildURL(
   url: string,
   params?: any,
   paramsSerializer?: (params: any) => string
@@ -24,6 +24,7 @@ export function buildRUL(
   if (!params) {
     return url
   }
+
   let serializedParams
 
   if (paramsSerializer) {
@@ -32,12 +33,13 @@ export function buildRUL(
     serializedParams = params.toString()
   } else {
     const parts: string[] = []
+
     Object.keys(params).forEach(key => {
       const val = params[key]
-      if (key === null || typeof key === 'undefined') {
+      if (val === null || typeof val === 'undefined') {
         return
       }
-      let values: any[] = []
+      let values = []
       if (Array.isArray(val)) {
         values = val
         key += '[]'
@@ -47,12 +49,13 @@ export function buildRUL(
       values.forEach(val => {
         if (isDate(val)) {
           val = val.toISOString()
-        } else if (isObject(val)) {
+        } else if (isPlainObject(val)) {
           val = JSON.stringify(val)
         }
         parts.push(`${encode(key)}=${encode(val)}`)
       })
     })
+
     serializedParams = parts.join('&')
   }
 
@@ -61,23 +64,32 @@ export function buildRUL(
     if (markIndex !== -1) {
       url = url.slice(0, markIndex)
     }
+
     url += (url.indexOf('?') === -1 ? '?' : '&') + serializedParams
   }
+
   return url
 }
 
 export function isAbsoluteURL(url: string): boolean {
-  return /([a-z][a-z\d\+\.]*:)?\/\//i.test(url)
+  return /^([a-z][a-z\d\+\-\.]*:)?\/\//i.test(url)
 }
 
 export function combineURL(baseURL: string, relativeURL?: string): string {
   return relativeURL ? baseURL.replace(/\/+$/, '') + '/' + relativeURL.replace(/^\/+/, '') : baseURL
 }
 
-const urlParsingNode = document.createElement('a')
-const currentOrigin = resolveRUL(window.location.href)
+export function isURLSameOrigin(requestURL: string): boolean {
+  const parsedOrigin = resolveURL(requestURL)
+  return (
+    parsedOrigin.protocol === currentOrigin.protocol && parsedOrigin.host === currentOrigin.host
+  )
+}
 
-function resolveRUL(url: string): URLOrigin {
+const urlParsingNode = document.createElement('a')
+const currentOrigin = resolveURL(window.location.href)
+
+function resolveURL(url: string): URLOrigin {
   urlParsingNode.setAttribute('href', url)
   const { protocol, host } = urlParsingNode
 
@@ -85,12 +97,4 @@ function resolveRUL(url: string): URLOrigin {
     protocol,
     host
   }
-}
-
-export function isURLSameOrigin(requestURL: string): boolean {
-  const parsedOrigin = resolveRUL(requestURL)
-
-  return (
-    parsedOrigin.protocol === currentOrigin.protocol && parsedOrigin.host === currentOrigin.host
-  )
 }

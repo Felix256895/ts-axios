@@ -8,10 +8,10 @@ import { isFormData } from '../helpers/util'
 export default function xhr(config: AxiosRequestConfig): AxiosPromise {
   return new Promise((resolve, reject) => {
     const {
-      url,
-      method = 'get',
       data = null,
-      headers,
+      url,
+      method,
+      headers = {},
       responseType,
       timeout,
       cancelToken,
@@ -26,7 +26,7 @@ export default function xhr(config: AxiosRequestConfig): AxiosPromise {
 
     const request = new XMLHttpRequest()
 
-    request.open(method.toUpperCase(), url!, true)
+    request.open(method!.toUpperCase(), url!, true)
 
     configureRequest()
 
@@ -53,32 +53,37 @@ export default function xhr(config: AxiosRequestConfig): AxiosPromise {
     }
 
     function addEvents(): void {
-      request.onreadystatechange = function() {
+      request.onreadystatechange = function handleLoad() {
         if (request.readyState !== 4) {
           return
         }
+
         if (request.status === 0) {
           return
         }
+
         const responseHeaders = parseHeaders(request.getAllResponseHeaders())
-        const responseData = responseType !== 'text' ? request.response : request.responseText
+        const responseData =
+          responseType && responseType !== 'text' ? request.response : request.responseText
         const response: AxiosResponse = {
-          config,
-          request,
           data: responseData,
           status: request.status,
           statusText: request.statusText,
-          headers: responseHeaders
+          headers: responseHeaders,
+          config,
+          request
         }
         handleResponse(response)
       }
 
-      request.onerror = function() {
+      request.onerror = function handleError() {
         reject(createError('Network Error', config, null, request))
       }
 
-      request.ontimeout = function() {
-        reject(createError(`Timeout of ${timeout} ms exceded`, config, 'ECONNABORTED', request))
+      request.ontimeout = function handleTimeout() {
+        reject(
+          createError(`Timeout of ${config.timeout} ms exceeded`, config, 'ECONNABORTED', request)
+        )
       }
 
       if (onDownloadProgress) {
@@ -96,14 +101,14 @@ export default function xhr(config: AxiosRequestConfig): AxiosPromise {
       }
 
       if ((withCredentials || isURLSameOrigin(url!)) && xsrfCookieName) {
-        const xsrfVal = cookie.read(xsrfCookieName)
-        if (xsrfVal && xsrfHeaderName) {
-          headers[xsrfHeaderName] = xsrfVal
+        const xsrfValue = cookie.read(xsrfCookieName)
+        if (xsrfValue && xsrfHeaderName) {
+          headers[xsrfHeaderName] = xsrfValue
         }
       }
 
       if (auth) {
-        headers['authorization'] = 'Basic' + btoa(auth.username + ':' + auth.password)
+        headers['Authorization'] = 'Basic ' + btoa(auth.username + ':' + auth.password)
       }
 
       Object.keys(headers).forEach(name => {
@@ -117,10 +122,17 @@ export default function xhr(config: AxiosRequestConfig): AxiosPromise {
 
     function processCancel(): void {
       if (cancelToken) {
-        cancelToken.promise.then(reason => {
-          request.abort()
-          reject(reason)
-        })
+        cancelToken.promise
+          .then(reason => {
+            request.abort()
+            reject(reason)
+          })
+          .catch(
+            /* istanbul ignore next */
+            () => {
+              // do nothing
+            }
+          )
       }
     }
 
@@ -130,7 +142,7 @@ export default function xhr(config: AxiosRequestConfig): AxiosPromise {
       } else {
         reject(
           createError(
-            `Requset failed with status code ${request.status}`,
+            `Request failed with status code ${response.status}`,
             config,
             null,
             request,

@@ -1,20 +1,18 @@
 export type Method =
   | 'get'
   | 'GET'
-  | 'post'
-  | 'PSOT'
   | 'delete'
   | 'DELETE'
   | 'head'
   | 'HEAD'
   | 'options'
   | 'OPTIONS'
+  | 'post'
+  | 'POST'
   | 'put'
   | 'PUT'
   | 'patch'
   | 'PATCH'
-  | 'request'
-  | 'REQUEST'
 
 export interface AxiosRequestConfig {
   url?: string
@@ -135,7 +133,7 @@ export interface CancelExecutor {
   (canceler: Canceler): void
 }
 
-export interface CancelTokenSoure {
+export interface CancelTokenSource {
   token: CancelToken
   cancel: Canceler
 }
@@ -143,7 +141,7 @@ export interface CancelTokenSoure {
 export interface CancelTokenStatic {
   new (exeutor: CancelExecutor): CancelToken
 
-  source(): CancelTokenSoure
+  source(): CancelTokenSource
 }
 
 export interface Cancel {
